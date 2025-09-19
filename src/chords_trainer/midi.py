@@ -44,3 +44,7 @@ class MidiProcessor:
                     "degrees": degrees,
                 }
             )
+
+    def stop(self):
+        self.thread.join(timeout=1.0)
+        self.thread = None

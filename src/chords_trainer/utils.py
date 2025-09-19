@@ -12,12 +12,25 @@ def in_rect(rect, pos):
 
 
 class Button:
-    def __init__(self, pos, size, text, font_size=20):
+    def __init__(self, pos, size, text, fit_box_to_text_width=False, font_size=20):
         self.pos = pos
         self.size = size
         self.text = text
         self.font_size = font_size
         self.bg_color = BG_COLOR
+        self.fit_box_to_text_width = fit_box_to_text_width
+        self.font = pygame.font.SysFont("Arial", self.font_size)
+
+        if self.fit_box_to_text_width:
+            # resize box to fit text width if the text is wider than the box
+            # offset left by the amount of pixels added to the width
+            text_width, text_height = self.font.size(self.text)
+            if text_width + 20 > self.size[0]:
+                self.pos = (self.pos[0] - (text_width - self.size[0]), self.pos[1])
+                self.size = (text_width + 20, self.size[1])
+                # add 20 pixels of padding
+                self.pos = (self.pos[0], self.pos[1])
+                self.size = (self.size[0] - 20, self.size[1])
 
     def render(self, screen):
         pygame.draw.rect(
@@ -33,8 +46,7 @@ class Button:
             1,
         )
 
-        font = pygame.font.SysFont("Arial", self.font_size)
-        text = font.render(self.text, True, TEXT_COLOR)
+        text = self.font.render(self.text, True, TEXT_COLOR)
         screen.blit(
             text,
             (

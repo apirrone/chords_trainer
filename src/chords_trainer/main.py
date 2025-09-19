@@ -32,15 +32,12 @@ def main():
     )
 
     interfaces = mido.get_input_names()
-    print("Detected interfaces : ")
-    for i, interface in enumerate(interfaces):
-        print(f"{i} : {interface}")
-    midi_processor = MidiProcessor(interfaces[1])
+    views = Views(screen, WINDOW_SIZE, interfaces, train_mode=args.train)
+
+    midi_processor = MidiProcessor(views.get_chosen_interface())
 
     if args.synth:
-        SineMIDISynth().start()
-
-    views = Views(screen, WINDOW_SIZE, train_mode=args.train)
+        synth = SineMIDISynth(views.get_chosen_interface())
 
     data = {"chord_notes": [], "names": [], "abbrs": [], "degrees": []}
 
@@ -71,6 +68,15 @@ def main():
 
         if success:
             next_train_chord = True
+
+        if views.interface_has_changed():
+            print("CHANGED")
+            midi_processor.stop()
+
+            midi_processor = MidiProcessor(views.get_chosen_interface())
+            if args.synth:
+                synth.stop()
+                synth = SineMIDISynth(views.get_chosen_interface())
 
         events = pygame.event.get()
         views.handle_events(

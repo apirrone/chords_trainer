@@ -16,20 +16,40 @@ class View:
 
 
 class Views:
-    def __init__(self, screen, window_size, train_mode=False):
+    def __init__(self, screen, window_size, interfaces, train_mode=False):
         self.screen = screen
         self.window_size = window_size
         self.display_chord_view = DisplayChordView(screen, window_size)
         self.train_view = TrainView(screen, window_size)
+        self.interfaces = interfaces
+        self.chosen_interface_idx = 1
+        self.change_interface = False
 
         self.train_mode_button = Button(
             (window_size[0] - 100, window_size[1] - 30), (100, 30), "Train mode"
+        )
+
+        self.interfaces_button = Button(
+            (self.window_size[0] - 200, 0),
+            (200, 30),
+            f"{self.interfaces[self.chosen_interface_idx]}",
+            fit_box_to_text_width=True,
         )
 
         if train_mode:
             self.current_view = self.train_view
         else:
             self.current_view = self.display_chord_view  # default view
+
+    def get_chosen_interface(self):
+        return self.interfaces[self.chosen_interface_idx]
+
+    def interface_has_changed(self):
+        ret = False
+        if self.change_interface:
+            ret = True
+            self.change_interface = False
+        return ret
 
     def handle_events(
         self, events, data, alternate_chord, current_train_chord, difficulty
@@ -52,11 +72,26 @@ class Views:
                             else 0
                         )
 
-        ret = self.train_mode_button.update(events)
+        toggle_train_mode = self.train_mode_button.update(events)
 
-        if ret:
+        if toggle_train_mode:
             current_train_chord = gen_random_chord(difficulty=difficulty)
             self.switch()
+
+        toggle_interface = self.interfaces_button.update(events)
+        if toggle_interface:
+            self.chosen_interface_idx = (
+                (self.chosen_interface_idx + 1) % len(self.interfaces)
+                if len(self.interfaces) > 1
+                else 0
+            )
+            self.interfaces_button = Button(
+                (self.window_size[0] - 200, 0),
+                (200, 30),
+                f"{self.interfaces[self.chosen_interface_idx]}",
+                fit_box_to_text_width=True,
+            )
+            self.change_interface = True
 
     def switch(self):
         if self.current_view == self.display_chord_view:
@@ -66,6 +101,7 @@ class Views:
 
     def render(self, data, i=0, current_train_chord=None):
         self.train_mode_button.render(self.screen)
+        self.interfaces_button.render(self.screen)
         return self.current_view.render(data, i, current_train_chord)
 
     def get_current_view(self):
