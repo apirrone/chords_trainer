@@ -3,8 +3,8 @@ from multiprocessing import Queue
 
 import pygame
 
-from chordstrainer.utils import BG_COLOR, TEXT_COLOR, Button
-from chordstrainer.chords import find_chords, gen_random_chord, is_same_chord
+from chords_trainer.utils import BG_COLOR, TEXT_COLOR, Button
+from chords_trainer.chords import find_chords, gen_random_chord, is_same_chord
 
 pygame.display.init()
 pygame.font.init()

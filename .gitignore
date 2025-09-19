@@ -1,2 +1,2 @@
-ChordsTrainer.egg-info/*
-chordstrainer/__pycache__/*
+*.egg-info
+__pycache__/
