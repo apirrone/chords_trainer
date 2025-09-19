@@ -1,6 +1,9 @@
+import time
+
 import pygame
 
-from chords_trainer.chords import difficulties, is_same_chord, gen_random_chord
+from chords_trainer.chords import difficulties, gen_random_chord, is_same_chord
+from chords_trainer.stats import Stats
 from chords_trainer.utils import TEXT_COLOR, Button
 
 
@@ -193,13 +196,19 @@ class TrainView(View):
             fit_box_to_text_width=True,
         )
         self.next_train_chord = False
+        self.stats = Stats()
+        self.current_chord_start_time = time.time()
+        self.current_chord_mistakes = 0
+        self.registered_mistake = False
 
     def render(self, data, alternate_chord_idx=0, current_train_chord=None):
         super().render(data, alternate_chord_idx)
         color = (255, 255, 0)
         same_chord = False
 
-        if len(data["names"]) != 0:
+        if len(data["names"]) == 0:  # released
+            self.registered_mistake = False
+        else:
             same_chord = is_same_chord(data["names"][0], current_train_chord[0])
             color = (0, 255, 0) if same_chord else (255, 0, 0)
             # # display abbrs smaller below
@@ -215,9 +224,17 @@ class TrainView(View):
                 ),
             )
 
-        # if self.next_train_chord and len(data["names"]) == 0:
-        #     current_train_chord = gen_random_chord(difficulty=self.difficulty)
-        #     self.next_train_chord = False
+            if not self.registered_mistake:
+                print("correct" if same_chord else "mistake")
+                time_taken = time.time() - self.current_chord_start_time
+                self.stats.record(
+                    current_train_chord[0],
+                    self.difficulty,
+                    time_taken,
+                    correct=same_chord,
+                )
+                self.registered_mistake = True
+                print(self.stats)
 
         if same_chord:
             self.next_train_chord = True
@@ -247,6 +264,8 @@ class TrainView(View):
             )
 
         if self.next_train_chord and len(data["names"]) == 0:
+            self.current_chord_start_time = time.time()
+            self.current_chord_mistakes = 0
             return True
 
         return False
