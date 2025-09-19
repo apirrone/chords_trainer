@@ -1,10 +1,13 @@
 import multiprocessing
+from threading import Thread
 from multiprocessing import Queue
+import argparse
 
 import pygame
 
 from chords_trainer.utils import BG_COLOR, TEXT_COLOR, Button
 from chords_trainer.chords import find_chords, gen_random_chord, is_same_chord
+from chords_trainer.synth import SineMIDISynth
 
 pygame.display.init()
 pygame.font.init()
@@ -13,7 +16,7 @@ pygame.font.init()
 data_queue = Queue()
 
 
-def midi_process():
+def midi_thread():
     import mido
 
     # TODO handle flat notes
@@ -26,7 +29,9 @@ def midi_process():
     for i, interface in enumerate(interfaces):
         print(f"{i} : {interface}")
     # inport = mido.open_input("uMIDI/O22:uMIDI/O22 MIDI 1 20:0")
-    inport = mido.open_input(interfaces[1]) # TODO button to iterate over detected interfaces
+    inport = mido.open_input(
+        interfaces[1]
+    )  # TODO button to iterate over detected interfaces
     for msg in inport:
         if "note" not in msg.type:
             continue
@@ -91,6 +96,7 @@ def display_chord(data, i=0):
         text = font.render(data["degrees"][i][chord_note], True, TEXT_COLOR)
         screen.blit(text, (3 + j * 30, 30))
 
+
 def train_mode(data, current_train_chord):
     color = (255, 255, 0)
     same_chord = False
@@ -121,7 +127,6 @@ def train_mode(data, current_train_chord):
     #     ),
     # )
 
-
     # DEBUG
     # display main chord name in big in the middle
 
@@ -145,9 +150,16 @@ screen = pygame.display.set_mode(window_size, flags=pygame.SRCALPHA + pygame.NOF
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--difficulty", type=int, default=0, help="Training difficulty (0=easy, 1=medium, 2=hard)")
+    args = parser.parse_args()
+    
     VIEW_MODE = True
-    TRAIN_DIFFICULTY = 0
-    multiprocessing.Process(target=midi_process).start()
+
+    Thread(target=midi_thread).start()  # Was using multiprocessing.Process before
+    synth = SineMIDISynth()
+    synth.start()
+
     data = {"chord_notes": [], "names": [], "abbrs": [], "degrees": []}
 
     train_mode_button = Button(
@@ -155,7 +167,9 @@ def main():
     )
 
     alternate_chord = 0
-    current_train_chord = gen_random_chord(difficulty=TRAIN_DIFFICULTY) # tuple like ('FAdd9', 'F', [0, 4, 7]), abbr, root, pattern
+    current_train_chord = gen_random_chord(
+        difficulty=args.difficulty
+    )  # tuple like ('FAdd9', 'F', [0, 4, 7]), abbr, root, pattern
     next_train_chord = False
 
     while True:
@@ -165,7 +179,7 @@ def main():
             data = data_queue.get(False)
             alternate_chord = 0
             if len(data["names"]) == 0 and next_train_chord:
-                current_train_chord = gen_random_chord(difficulty=TRAIN_DIFFICULTY)
+                current_train_chord = gen_random_chord(difficulty=args.difficulty)
                 next_train_chord = False
         except multiprocessing.queues.Empty:
             pass
@@ -205,13 +219,13 @@ def main():
 
         if ret:
             VIEW_MODE = not VIEW_MODE
-            current_train_chord = gen_random_chord(difficulty=TRAIN_DIFFICULTY)
+            current_train_chord = gen_random_chord(difficulty=args.difficulty)
 
         train_mode_button.draw(screen)
 
         if not VIEW_MODE:
             font = pygame.font.SysFont("Arial", 20)
-            text = font.render("TRAIN MODE", True, (255, 255,0))
-            screen.blit(text, (0,window_size[1] - text.get_height()))
+            text = font.render("TRAIN MODE", True, (255, 255, 0))
+            screen.blit(text, (0, window_size[1] - text.get_height()))
 
         pygame.display.flip()
