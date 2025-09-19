@@ -30,11 +30,16 @@ Click on the "difficulty" button to change it. It's a number between 0 and 2. 0 
 ## TODO
 - [X] Add a way to select the midi interface (just a button to iterate over interfaces)
 - [X] Add a way to change the difficulty in the app
+- [ ] Show a keyboard on the bottom of the UI
 - [ ] Include flat notes
 - [ ] Improve train mode
   - [ ] Make "train sessions", with stats (reactivity, errors)
-  - [ ] Make a training program Anki style
+  - [x] Make a training program Anki style
   - [ ] Identify chords inversions played, encourage variety
+  - [ ] Vary abbreviations
+  - [ ] More difficulty granularity ?
+  - [ ] Click to show solution
+  - [ ] 
 - [ ] Config file for defaults (start in train mode, prefered interface ...)
 
 
