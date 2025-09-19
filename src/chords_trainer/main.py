@@ -151,14 +151,20 @@ screen = pygame.display.set_mode(window_size, flags=pygame.SRCALPHA + pygame.NOF
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--difficulty", type=int, default=0, help="Training difficulty (0=easy, 1=medium, 2=hard)")
+    parser.add_argument(
+        "--difficulty",
+        type=int,
+        default=0,
+        help="Training difficulty (0=easy, 1=medium, 2=hard)",
+    )
+    parser.add_argument("--synth", action="store_true", help="Enable MIDI synth")
     args = parser.parse_args()
-    
+
     VIEW_MODE = True
 
     Thread(target=midi_thread).start()  # Was using multiprocessing.Process before
-    synth = SineMIDISynth()
-    synth.start()
+    if args.synth:
+        SineMIDISynth().start()
 
     data = {"chord_notes": [], "names": [], "abbrs": [], "degrees": []}
 
