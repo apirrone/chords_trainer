@@ -1,16 +1,62 @@
 import pygame
-from chords_trainer.chords import is_same_chord
-from chords_trainer.utils import TEXT_COLOR
+from chords_trainer.chords import is_same_chord, gen_random_chord
+from chords_trainer.utils import TEXT_COLOR, Button
 
 
-class Views:
+class View:
     def __init__(self, screen, window_size):
         self.screen = screen
         self.window_size = window_size
-        self.current_view = self.display_chord_view  # default view
 
-    def get_current_view(self):
-        return self.current_view.__name__
+    def render(self, data, i=0, current_train_chord=None):
+        # Always display the currently played notes at the top left
+        font = pygame.font.SysFont("Arial", 30)
+        text = font.render(" ".join(data["chord_notes"]), True, TEXT_COLOR)
+        self.screen.blit(text, (0, 0))
+
+
+class Views:
+    def __init__(self, screen, window_size, train_mode=False):
+        self.screen = screen
+        self.window_size = window_size
+        self.display_chord_view = DisplayChordView(screen, window_size)
+        self.train_view = TrainView(screen, window_size)
+
+        self.train_mode_button = Button(
+            (window_size[0] - 100, window_size[1] - 30), (100, 30), "Train mode"
+        )
+
+        if train_mode:
+            self.current_view = self.train_view
+        else:
+            self.current_view = self.display_chord_view  # default view
+
+    def handle_events(
+        self, events, data, alternate_chord, current_train_chord, difficulty
+    ):
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    alternate_chord = (
+                        (alternate_chord + 1) % len(data["names"])
+                        if len(data["names"]) > 1
+                        else 0
+                    )
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    if not self.train_mode_button.hover(event.pos):
+                        alternate_chord = (
+                            (alternate_chord + 1) % len(data["names"])
+                            if len(data["names"]) > 1
+                            else 0
+                        )
+
+        ret = self.train_mode_button.update(events)
+
+        if ret:
+            current_train_chord = gen_random_chord(difficulty=difficulty)
+            self.switch()
 
     def switch(self):
         if self.current_view == self.display_chord_view:
@@ -18,16 +64,24 @@ class Views:
         else:
             self.current_view = self.display_chord_view
 
-    def switch_to_train_view(self):
-        self.current_view = self.train_view
+    def render(self, data, i=0, current_train_chord=None):
+        self.train_mode_button.render(self.screen)
+        return self.current_view.render(data, i, current_train_chord)
 
-    def switch_to_display_chord_view(self):
-        self.current_view = self.display_chord_view
+    def get_current_view(self):
+        if self.current_view == self.display_chord_view:
+            return "display_chord_view"
+        else:
+            return "train_view"
 
-    def view(self, data, i=0, current_train_chord=None):
-        return self.current_view(data, i, current_train_chord)
 
-    def display_chord_view(self, data, i=0, current_train_chord=None):
+class DisplayChordView(View):
+    def __init__(self, screen, window_size):
+        super().__init__(screen, window_size)
+        pass
+
+    def render(self, data, i=0, current_train_chord=None):
+        super().render(data, i, current_train_chord)
         if len(data["names"]) == 0:
             return
 
@@ -65,7 +119,16 @@ class Views:
             text = font.render(data["degrees"][i][chord_note], True, TEXT_COLOR)
             self.screen.blit(text, (3 + j * 30, 30))
 
-    def train_view(self, data, i=0, current_train_chord=None):
+        return False
+
+
+class TrainView(View):
+    def __init__(self, screen, window_size):
+        super().__init__(screen, window_size)
+        pass
+
+    def render(self, data, i=0, current_train_chord=None):
+        super().render(data, i, current_train_chord)
         color = (255, 255, 0)
         same_chord = False
 
@@ -84,6 +147,10 @@ class Views:
             ),
         )
 
+        font = pygame.font.SysFont("Arial", 20)
+        text = font.render("TRAIN MODE", True, (255, 255, 0))
+        self.screen.blit(text, (0, self.window_size[1] - text.get_height()))
+
         # # display abbrs smaller below
         # font = pygame.font.SysFont("Arial", 30)
         # text = font.render(", ".join(data["abbrs"][i]), True, TEXT_COLOR)
@@ -100,6 +167,7 @@ class Views:
 
         if len(data["names"]) == 0:
             return
+
         font = pygame.font.SysFont("Arial", 30)
         text = font.render(data["names"][0], True, TEXT_COLOR)
         self.screen.blit(
@@ -109,5 +177,8 @@ class Views:
                 self.window_size[1] // 3 - text.get_height() // 3,
             ),
         )
+
+        # if same_chord:
+        #     print("AAAAAAAAAAAAAA")
 
         return same_chord

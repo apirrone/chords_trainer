@@ -19,7 +19,7 @@ class Button:
         self.font_size = font_size
         self.bg_color = BG_COLOR
 
-    def draw(self, screen):
+    def render(self, screen):
         pygame.draw.rect(
             screen,
             self.bg_color,
