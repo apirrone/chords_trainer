@@ -24,7 +24,7 @@ $ chords-trainer
 
 You can click on the `train mode` button to switch to train mode. In this mode, the app shows you a random chord, if you play the right chord it goes to a next one.
 
-You can change the `TRAIN_DIFFICULTY` value in `__init__.py`, it's a number between 0 and 2. 0 is easiest, 2 is hardest.
+Click on the "difficulty" button to change it. It's a number between 0 and 2. 0 is easiest, 2 is hardest.
 
 
 ## TODO

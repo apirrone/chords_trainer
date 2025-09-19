@@ -1,6 +1,6 @@
 import pygame
 
-from chords_trainer.chords import difficulties, is_same_chord
+from chords_trainer.chords import difficulties, is_same_chord, gen_random_chord
 from chords_trainer.utils import TEXT_COLOR, Button
 
 
@@ -10,7 +10,7 @@ class View:
         self.window_size = window_size
         self.difficulty = difficulty
 
-    def render(self, data, alternate_chord_idx=0, current_train_chord=None):
+    def render(self, data, alternate_chord_idx=0):
         # Always display the currently played notes at the top left
         font = pygame.font.SysFont("Arial", 30)
         text = font.render(" ".join(data["chord_notes"]), True, TEXT_COLOR)
@@ -28,6 +28,7 @@ class Views:
         self.change_interface = False
         self.difficulty = difficulty
         self.alternate_chord_idx = 0
+        self.current_train_chord = gen_random_chord(difficulty=difficulty)
 
         self.train_mode_button = Button(
             (window_size[0] - 100, window_size[1] - 30), (100, 30), "Train mode"
@@ -112,12 +113,16 @@ class Views:
         else:
             self.current_view = self.display_chord_view
 
-    def render(self, data, current_train_chord=None):
+    def render(self, data):
         self.train_mode_button.render(self.screen)
         self.interfaces_button.render(self.screen)
-        return self.current_view.render(
-            data, self.alternate_chord_idx, current_train_chord
+        next_train_chord = self.current_view.render(
+            data, self.alternate_chord_idx, self.current_train_chord
         )
+
+        if next_train_chord:
+            self.current_train_chord = gen_random_chord(difficulty=self.difficulty)
+            self.current_view.next_train_chord = False
 
     def get_current_view(self):
         if self.current_view == self.display_chord_view:
@@ -132,7 +137,7 @@ class DisplayChordView(View):
         pass
 
     def render(self, data, alternate_chord_idx=0, current_train_chord=None):
-        super().render(data, current_train_chord)
+        super().render(data, alternate_chord_idx)
         if len(data["names"]) == 0:
             return
 
@@ -187,9 +192,10 @@ class TrainView(View):
             f"Difficulty: {self.difficulty}",
             fit_box_to_text_width=True,
         )
+        self.next_train_chord = False
 
     def render(self, data, alternate_chord_idx=0, current_train_chord=None):
-        super().render(data, alternate_chord_idx, current_train_chord)
+        super().render(data, alternate_chord_idx)
         color = (255, 255, 0)
         same_chord = False
 
@@ -209,6 +215,13 @@ class TrainView(View):
                 ),
             )
 
+        # if self.next_train_chord and len(data["names"]) == 0:
+        #     current_train_chord = gen_random_chord(difficulty=self.difficulty)
+        #     self.next_train_chord = False
+
+        if same_chord:
+            self.next_train_chord = True
+
         # display main chord name in big in the middle
         font = pygame.font.SysFont("Arial", 60)
         text = font.render(current_train_chord[0], True, color)
@@ -221,17 +234,19 @@ class TrainView(View):
         )
 
         self.difficulty_button.render(self.screen)
-        if len(data["names"]) == 0:
-            return
 
-        font = pygame.font.SysFont("Arial", 30)
-        text = font.render(data["names"][0], True, TEXT_COLOR)
-        self.screen.blit(
-            text,
-            (
-                self.window_size[0] // 3 - text.get_width() // 3,
-                self.window_size[1] // 3 - text.get_height() // 3,
-            ),
-        )
+        if len(data["names"]) != 0:
+            font = pygame.font.SysFont("Arial", 30)
+            text = font.render(data["names"][0], True, TEXT_COLOR)
+            self.screen.blit(
+                text,
+                (
+                    self.window_size[0] // 3 - text.get_width() // 3,
+                    self.window_size[1] // 3 - text.get_height() // 3,
+                ),
+            )
 
-        return same_chord
+        if self.next_train_chord and len(data["names"]) == 0:
+            return True
+
+        return False
