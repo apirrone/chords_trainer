@@ -32,6 +32,8 @@ Click on the "difficulty" button to change it. It's a number between 0 and 2. 0 
 - [X] Add a way to change the difficulty in the app
 - [ ] Show a keyboard on the bottom of the UI
 - [ ] Include flat notes
+- [ ] extension notes are missing (9, 13 ...)
+- [ ] Missing sus ? 
 - [ ] Improve train mode
   - [ ] Make "train sessions", with stats (reactivity, errors)
   - [x] Make a training program Anki style
