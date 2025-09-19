@@ -1,8 +1,10 @@
-# sine_midi_synth_debug.py
-import threading, math, time
+import math
+import threading
+import time
+
+import mido
 import numpy as np
 import sounddevice as sd
-import mido
 
 
 class SineMIDISynth:
@@ -220,8 +222,8 @@ class SineMIDISynth:
             dtype="float32",
         )
         self._audio.start()
-        # if self._debug:
-        print("[AUDIO] started")
+        if self._debug:
+            print("[AUDIO] started")
 
     def stop(self):
         self._stop_evt.set()
@@ -235,7 +237,7 @@ class SineMIDISynth:
         if self._owns_port and self._inport is not None:
             self._inport.close()
             self._inport = None
-        # if self._debug:
+        if self._debug:
             print("[AUDIO] stopped")
 
     def panic(self):

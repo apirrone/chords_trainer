@@ -29,7 +29,7 @@ You can change the `TRAIN_DIFFICULTY` value in `__init__.py`, it's a number betw
 
 ## TODO
 - [X] Add a way to select the midi interface (just a button to iterate over interfaces)
-- [ ] Add a way to change the difficulty in the app
+- [X] Add a way to change the difficulty in the app
 - [ ] Include flat notes
 - [ ] Improve train mode
   - [ ] Make "train sessions", with stats (reactivity, errors)

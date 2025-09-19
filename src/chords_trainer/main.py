@@ -31,8 +31,11 @@ def main():
         WINDOW_SIZE, flags=pygame.SRCALPHA + pygame.NOFRAME
     )
 
+    difficulty = args.difficulty
     interfaces = mido.get_input_names()
-    views = Views(screen, WINDOW_SIZE, interfaces, train_mode=args.train)
+    views = Views(
+        screen, WINDOW_SIZE, interfaces, difficulty=difficulty, train_mode=args.train
+    )
 
     midi_processor = MidiProcessor(views.get_chosen_interface())
 
@@ -41,9 +44,8 @@ def main():
 
     data = {"chord_notes": [], "names": [], "abbrs": [], "degrees": []}
 
-    alternate_chord = 0
     current_train_chord = gen_random_chord(
-        difficulty=args.difficulty
+        difficulty=views.difficulty
     )  # tuple like ('FAdd9', 'F', [0, 4, 7]), abbr, root, pattern
     next_train_chord = False
 
@@ -52,19 +54,15 @@ def main():
 
         if not midi_processor.data_queue.empty():
             data = midi_processor.data_queue.get(False)
-            alternate_chord = 0
             if len(data["names"]) == 0 and next_train_chord:
-                print("NEXT CHORD")
-                current_train_chord = gen_random_chord(difficulty=args.difficulty)
+                current_train_chord = gen_random_chord(difficulty=views.difficulty)
                 next_train_chord = False
 
         font = pygame.font.SysFont("Arial", 30)
         text = font.render(" ".join(data["chord_notes"]), True, TEXT_COLOR)
         screen.blit(text, (0, 0))
 
-        success = views.render(
-            data, i=alternate_chord, current_train_chord=current_train_chord
-        )
+        success = views.render(data, current_train_chord=current_train_chord)
 
         if success:
             next_train_chord = True
@@ -79,8 +77,6 @@ def main():
                 synth = SineMIDISynth(views.get_chosen_interface())
 
         events = pygame.event.get()
-        views.handle_events(
-            events, data, alternate_chord, current_train_chord, args.difficulty
-        )
+        views.handle_events(events, data)
 
         pygame.display.flip()
