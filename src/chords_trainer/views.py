@@ -198,8 +198,9 @@ class TrainView(View):
         self.next_train_chord = False
         self.stats = Stats()
         self.current_chord_start_time = time.time()
-        self.current_chord_mistakes = 0
-        self.registered_mistake = False
+        self.current_chord_mistakes = 0  # reserved for future detailed counts
+        self.registered_mistake = False  # debounce mistake per attempt
+        self.attempt_has_mistake = False
 
     def render(self, data, alternate_chord_idx=0, current_train_chord=None):
         super().render(data, alternate_chord_idx)
@@ -224,17 +225,10 @@ class TrainView(View):
                 ),
             )
 
-            if not self.registered_mistake:
-                print("correct" if same_chord else "mistake")
-                time_taken = time.time() - self.current_chord_start_time
-                self.stats.record(
-                    current_train_chord[0],
-                    self.difficulty,
-                    time_taken,
-                    correct=same_chord,
-                )
+            # Track if a mistake occurred during this attempt (debounced).
+            if not same_chord and not self.registered_mistake:
+                self.attempt_has_mistake = True
                 self.registered_mistake = True
-                print(self.stats)
 
         if same_chord:
             self.next_train_chord = True
@@ -264,8 +258,20 @@ class TrainView(View):
             )
 
         if self.next_train_chord and len(data["names"]) == 0:
+            # Register the correct solve now that the chord has been released
+            time_taken = time.time() - self.current_chord_start_time
+            self.stats.record(
+                current_train_chord[0],
+                self.difficulty,
+                time_taken,
+                correct=True,
+                mistakes=1 if self.attempt_has_mistake else 0,
+            )
+            print("correct")
+            print(self.stats)
             self.current_chord_start_time = time.time()
             self.current_chord_mistakes = 0
+            self.attempt_has_mistake = False
             return True
 
         return False
