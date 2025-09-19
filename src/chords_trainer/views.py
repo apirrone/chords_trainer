@@ -1,8 +1,15 @@
 import time
+import random
 
 import pygame
 
-from chords_trainer.chords import difficulties, gen_random_chord, is_same_chord
+from chords_trainer.chords import (
+    difficulties,
+    gen_random_chord,
+    is_same_chord,
+    chr_scale,
+    chord_names,
+)
 from chords_trainer.stats import Stats
 from chords_trainer.utils import TEXT_COLOR, Button
 
@@ -31,7 +38,7 @@ class Views:
         self.change_interface = False
         self.difficulty = difficulty
         self.alternate_chord_idx = 0
-        self.current_train_chord = gen_random_chord(difficulty=difficulty)
+        self.current_train_chord = self.train_view._pick_next_srs_chord()
 
         self.train_mode_button = Button(
             (window_size[0] - 100, window_size[1] - 30), (100, 30), "Train mode"
@@ -103,6 +110,9 @@ class Views:
             if toggle_difficulty:
                 nb_difficulties = len(difficulties)
                 self.difficulty = (self.difficulty + 1) % nb_difficulties
+                # keep child views in sync
+                self.train_view.difficulty = self.difficulty
+                self.display_chord_view.difficulty = self.difficulty
                 self.current_view.difficulty_button = Button(
                     (0, self.window_size[1] - 30),
                     (200, 30),
@@ -124,7 +134,7 @@ class Views:
         )
 
         if next_train_chord:
-            self.current_train_chord = gen_random_chord(difficulty=self.difficulty)
+            self.current_train_chord = self.train_view._pick_next_srs_chord()
             self.current_view.next_train_chord = False
 
     def get_current_view(self):
@@ -275,3 +285,65 @@ class TrainView(View):
             return True
 
         return False
+
+    # ---------- SRS scheduling ----------
+    def _allowed_types(self):
+        return difficulties[self.difficulty]
+
+    def _pick_next_srs_chord(self):
+        """Pick the next chord using SM-2 scheduling.
+
+        Strategy with controlled randomness:
+        - Build pool of all roots x allowed chord types (canonical names).
+        - If any are due (due_ts <= now), sample among them with weights
+          proportional to how overdue they are and slightly favor lower EF.
+        - Otherwise, sample among the soonest-due items with weights skewed
+          toward earlier due and lower EF.
+        - Returns tuple: (label, root, pattern) like gen_random_chord.
+        """
+        import time as _t
+
+        pool = []
+        for root in chr_scale:
+            for name in self._allowed_types():
+                label = f"{root} {name}"
+                due = self.stats.get_due(label)
+                # pull EF if known
+                cs = self.stats.chords.get(label)
+                ef = cs.ef if cs is not None else 2.5
+                pool.append({
+                    "due": float(due),
+                    "label": label,
+                    "root": root,
+                    "pattern": chord_names[name]["pattern"],
+                    "ef": float(ef),
+                })
+
+        if not pool:
+            # Fallback to random if something went wrong
+            return gen_random_chord(difficulty=self.difficulty)
+
+        now = _t.time()
+        # separate due vs not due
+        due_items = [it for it in pool if it["due"] <= now]
+        if due_items:
+            # weight by overdue minutes and difficulty (lower EF => higher weight)
+            weights = []
+            for it in due_items:
+                overdue_min = max(0.0, (now - it["due"]) / 60.0)
+                w = 1.0 + overdue_min + max(0.0, 3.0 - it["ef"]) * 0.5
+                weights.append(w)
+            pick = random.choices(due_items, weights=weights, k=1)[0]
+        else:
+            # No items due: bias toward soonest-due but keep variety
+            # Compute hours until due
+            hours = [max(0.0, (it["due"] - now) / 3600.0) for it in pool]
+            # Inverse weighting with EF tweak
+            weights = []
+            for it, h in zip(pool, hours):
+                w = 1.0 / (1.0 + h)
+                w += max(0.0, 3.0 - it["ef"]) * 0.2
+                weights.append(w)
+            pick = random.choices(pool, weights=weights, k=1)[0]
+
+        return (pick["label"], pick["root"], pick["pattern"])
