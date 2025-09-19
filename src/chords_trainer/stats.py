@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+import json
+import os
 
 
 @dataclass
@@ -12,7 +14,13 @@ class ChordStats:
 
 class Stats:
     def __init__(self):
-        self.chords = {}
+        if os.path.exists("stats.json"):
+            self.chords = json.load(open("stats.json", "r"))
+            # Convert dicts to ChordStats
+            for k, v in self.chords.items():
+                self.chords[k] = ChordStats(**v)
+        else:
+            self.chords = {}
 
     def record(self, chord_name, difficulty, time_taken, correct, mistakes=0):
         """Record one training attempt for a chord.
@@ -32,6 +40,12 @@ class Stats:
         if correct:
             n = chord_stats.occurrences
             chord_stats.avg_time += (time_taken - chord_stats.avg_time) / n
+            self.save()
+
+    def save(self):
+        json.dump(
+            self.chords, open("stats.json", "w"), indent=4, default=lambda o: o.__dict__
+        )
 
     def __repr__(self):
         ret = "Stats:\n"
